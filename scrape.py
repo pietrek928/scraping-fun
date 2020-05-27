@@ -12,16 +12,17 @@ class RequestHandler:
         self._proxies = dict(proxies) or get_proxies()
 
     def get(self, url):
-        r = requests.get(url, headers=self._headers, proxies=self._proxies)
-        r.raise_for_status()
-        return r
+        try:
+            r = requests.get(url, headers=self._headers, proxies=self._proxies)
+        except Exception as e:
+            return f'error: {e.__class__.__name__} {e}'
+        return r.text
 
 
 def _get_process_item(req: RequestHandler, url_template, item):
     url = url_template.format(*item.split('#'))
-    r = req.get(url)
-    r.raise_for_status()
-    return item, r.text
+    body = req.get(url)
+    return item, body
 
 
 def map_scrape_get(url_template, items, threads=4):
