@@ -6,21 +6,28 @@ from scrape import *
 from storage import *
 
 
-def process_us_parcels(st, county, n):
+def process_us_parcels():
     errors = 0
-    county_path = f'us/{st}/{county}'
-    with JSONStorage(county_path) as stor:
+    with JSONStorage('cumberland') as stor:
         # stor.clear_errors()
-        rr = tuple(map(str, range(1, n)))
+        with open('cumberland_47035970102_1.json', 'r') as f:
+            rr = json.load(f)
+        rr = tuple(
+            v.replace('http:', 'https:') for v in rr
+        )
         total_len = len(rr)
-        rr = tuple(stor.filter_items(rr))
+        mapp = {
+            url.split('/')[-1].split('.')[0] : url for url in rr
+        }
+        rr = tuple(stor.filter_items(mapp.keys()))
         filtered_len = total_len - len(rr)
         counter = tqdm(map_scrape_get(
-            'https://landgrid.com/' + county_path + '/{}.json',
-            rr, threads=16
-        ))
+            '{}',
+            (mapp[v] for v in rr), threads=16
+        ), total=total_len)
         counter.update(filtered_len)
         for n, v in counter:
+            n = n.split('/')[-1].split('.')[0]
             try:
                 v = json.loads(v)
                 if 'id' in v:
