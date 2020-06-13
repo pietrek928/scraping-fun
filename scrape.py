@@ -1,5 +1,6 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 from functools import partial
+from urllib.parse import urlencode
 
 import requests
 
@@ -11,9 +12,21 @@ class RequestHandler:
         self._headers = dict(headers) or get_headers()
         self._proxies = dict(proxies) or get_proxies()
 
-    def get(self, url):
+    def get(self, url, params=()):
         try:
+            if params:
+                url += '?' + urlencode(dict(params))
             r = requests.get(url, headers=self._headers, proxies=self._proxies)
+        except Exception as e:
+            return f'error: {e.__class__.__name__} {e}'
+        return r.text
+
+    def post(self, url, data):
+        try:
+            if isinstance(data, (str, bytes)):
+                r = requests.post(url, data=data, headers=self._headers, proxies=self._proxies)
+            else:
+                r = requests.post(url, json=data, headers=self._headers, proxies=self._proxies)
         except Exception as e:
             return f'error: {e.__class__.__name__} {e}'
         return r.text
