@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from itertools import product
 
 from scrape import RequestHandler
@@ -117,6 +118,45 @@ def show_construction_types(country_id):
         print(i, v['name'])
         print('parent: ', ii[v['parentId']])
         print()
+
+
+def create_csv(country_id):
+    con_n = {}
+    loc_n = {}
+    occ_used = set()
+    loc_used = set()
+
+    cost_array = defaultdict(lambda: defaultdict(list))
+
+    with JSONStorage(f'lmigroup_{country_id}') as stor:
+        stor.clear_errors()
+        for i in stor.items():
+            if i.startswith('loc_'):
+                for l in stor.read_item(i):
+                    loc_n[l['id']] = l['name'].strip()
+            if i.startswith('constr_'):
+                for c in stor.read_item(i):
+                    con_n[c['id']] = c['name'].strip()
+            if i.startswith('cost_'):
+                cost_data = stor.read_item(i)
+                occ_used.add(cost_data['construction']['id'])
+                loc_used.add(cost_data['location']['id'])
+                cost_array[cost_data['construction']['id']][cost_data['location']['id']] = [
+                    cost_data['lowerCost'], cost_data['upperCost']
+                ]
+
+    occ_ids = sorted(occ_used)
+    loc_ids = sorted(loc_used)
+
+    with open(f'country_{country_id}.csv', 'w') as f:
+        fr = ['']
+        fr.extend(map(loc_n.get, loc_ids))
+        f.write(','.join(fr) + '\n')
+        for oid in occ_ids:
+            r = [f'"{con_n[oid]}"']
+            for lid in loc_ids:
+                r.append('"' + '\n'.join(map(str, cost_array[oid][lid])) + '"')
+            f.write(','.join(r) + '\n')
 
 
 def archive_data(country_id):
